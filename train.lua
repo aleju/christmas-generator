@@ -101,10 +101,7 @@ print("<trainer> starting gpu support...")
 require 'nn'
 require 'cutorch'
 require 'cunn'
-require 'LeakyReLU'
 require 'dpnn'
-require 'layers.cudnnSpatialConvolutionUpsample'
-require 'stn'
 if OPT.gpu then
     cutorch.setDevice(OPT.gpu + 1)
     cutorch.manualSeed(OPT.seed)
@@ -153,8 +150,8 @@ function main()
                 MODEL_G:float()
             end
 
-            MODEL_D = MODELS.create_D(IMG_DIMENSIONS, OPT.gpu ~= false)
-            MODEL_G = MODELS.create_G(IMG_DIMENSIONS, OPT.noiseDim)
+            --MODEL_D = MODELS.create_D(IMG_DIMENSIONS, OPT.gpu ~= false)
+            --MODEL_G = MODELS.create_G(IMG_DIMENSIONS, OPT.noiseDim, OPT.gpu ~= false)
         else
             --------------
             -- D
@@ -175,7 +172,7 @@ function main()
                 end
             else
                 print("<trainer> Note: Did not find pretrained G")
-                MODEL_G = MODELS.create_G(IMG_DIMENSIONS, OPT.noiseDim)
+                MODEL_G = MODELS.create_G(IMG_DIMENSIONS, OPT.noiseDim, OPT.gpu ~= false)
             end
         end
     end
@@ -188,12 +185,14 @@ function main()
     print(string.format('Number of free parameters in G: %d', NN_UTILS.getNumberOfParameters(MODEL_G)))
 
     -- Copy models to GPU
+    --[[
     if OPT.gpu then
         print("Copying model to gpu...")
         -- D is already on the GPU
         --MODEL_D = NN_UTILS.activateCuda(MODEL_D)
         MODEL_G = NN_UTILS.activateCuda(MODEL_G)
     end
+    --]]
 
     -- loss function: negative log-likelihood
     CRITERION = nn.BCECriterion()
