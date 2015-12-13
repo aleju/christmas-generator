@@ -324,28 +324,28 @@ function models.create_G_decoder_upsampling32c_residual(dimensions, noiseDim, cu
     end
 
     -- 4x6
-    model:add(nn.Linear(noiseDim, 128*4*6))
-    model:add(nn.BatchNormalization(128*4*6))
+    model:add(nn.Linear(noiseDim, 512*4*6))
+    model:add(nn.BatchNormalization(512*4*6))
     model:add(nn.LeakyReLU(0.33, true))
-    model:add(nn.View(128, 4, 6))
+    model:add(nn.View(512, 4, 6))
 
     -- 4x6 -> 8x12
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(cudnn.SpatialConvolution(128, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(128))
+    model:add(cudnn.SpatialConvolution(512, 512, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(512))
     model:add(nn.LeakyReLU(0.33, true))
-    model:add(createResidual(128, 128, 128))
+    model:add(createResidual(512, 512, 256))
 
     -- 8x12 -> 16x24
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(createResidual(128, 128, 256))
+    model:add(createResidual(256, 256, 128))
 
     -- 16x24 -> 32x48
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(createResidual(256, 256, 256))
+    model:add(createResidual(128, 128, 64))
 
     -- decrease to usually 3 dimensions (image channels)
-    model:add(cudnn.SpatialConvolution(256, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(cudnn.SpatialConvolution(64, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     model:add(nn.Sigmoid())
 
     if cuda then
