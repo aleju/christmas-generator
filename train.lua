@@ -46,6 +46,7 @@ OPT = lapp[[
   --weightsVisFreq   (default 0)            how often to update the weight visualization (requires starting with qlua, 0 is off)
   --aws                                     run in AWS mode
   --colorSpace       (default "rgb")        rgb|yuv|hsl|y
+  --nopretraining                           Whether to deactivate loading of pretrained networks
 ]]
 
 NORMALIZE = false
@@ -139,7 +140,7 @@ function main()
     else
         local pt_filename = paths.concat(OPT.save, string.format('pretrained_%dx%dx%d_nd%d.net', IMG_DIMENSIONS[1], IMG_DIMENSIONS[2], IMG_DIMENSIONS[3], OPT.noiseDim))
         -- pretrained via pretrain_with_previous_net.lua ?
-        if paths.filep(pt_filename) then
+        if not OPT.nopretraining and paths.filep(pt_filename) then
             local tmp = torch.load(pt_filename)
             MODEL_D = tmp.D
             MODEL_G = tmp.G
@@ -162,7 +163,7 @@ function main()
             -- G
             --------------
             local g_pt_filename = paths.concat(OPT.G_pretrained_dir, string.format('g_pretrained_%dx%dx%d_nd%d.net', IMG_DIMENSIONS[1], IMG_DIMENSIONS[2], IMG_DIMENSIONS[3], OPT.noiseDim))
-            if paths.filep(g_pt_filename) then
+            if not OPT.nopretraining and paths.filep(g_pt_filename) then
                 -- Load a pretrained version of G
                 print("<trainer> loading pretrained G...")
                 local tmp = torch.load(g_pt_filename)
