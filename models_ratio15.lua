@@ -269,42 +269,65 @@ function models.create_G_decoder_upsampling32c(dimensions, noiseDim)
 end
 
 function models.create_G_decoder_upsampling32c_residual(dimensions, noiseDim, cuda)
-    --[[
-    function createResidual(nbInputPlanes, nbInnerPlanes)
+    function createReduce(nbInputPlanes, nbOutputPlanes)
+        local seq = nn.Sequential()
+        seq:add(cudnn.SpatialConvolution(nbInputPlanes, nbOutputPlanes, 1, 1, 1, 1, 0, 0))
+        seq:add(nn.SpatialBatchNormalization(nbOutputPlanes))
+        seq:add(nn.PReLU())
+        return seq
+    end
+
+    function createResidual(nbInputPlanes, nbInnerPlanes, nbOutputPlanes)
         local seq = nn.Sequential()
         local inner = nn.Sequential()
         inner:add(cudnn.SpatialConvolution(nbInputPlanes, nbInnerPlanes, 1, 1, 1, 1, 0, 0))
-        inner:add(nn.SpatialBatchNormalization(32))
-        inner:add(nn.LeakyReLU(0.33, true))
+        inner:add(nn.SpatialBatchNormalization(nbInnerPlanes))
+        inner:add(cudnn.ReLU(true))
         inner:add(cudnn.SpatialConvolution(nbInnerPlanes, nbInnerPlanes, 3, 3, 1, 1, 1, 1))
-        inner:add(nn.SpatialBatchNormalization(32))
-        inner:add(nn.LeakyReLU(0.33, true))
-        inner:add(cudnn.SpatialConvolution(nbInnerPlanes, 256, 1, 1, 1, 1, 0, 0))
-        inner:add(nn.SpatialBatchNormalization(256))
-        inner:add(nn.LeakyReLU(0.33, true))
+        inner:add(nn.SpatialBatchNormalization(nbInnerPlanes))
+        inner:add(cudnn.ReLU(true))
+        inner:add(cudnn.SpatialConvolution(nbInnerPlanes, nbOutputPlanes, 1, 1, 1, 1, 0, 0))
+        inner:add(nn.SpatialBatchNormalization(nbOutputPlanes))
+        inner:add(cudnn.ReLU(true))
 
         local conc = nn.ConcatTable(2)
         conc:add(inner)
-        conc:add(nn.Identity())
+        if nbInputPlanes == nbOutputPlanes then
+            conc:add(nn.Identity())
+        else
+            reducer = nn.Sequential()
+            reducer:add(cudnn.SpatialConvolution(nbInputPlanes, nbOutputPlanes, 1, 1, 1, 1, 0, 0))
+            reducer:add(nn.SpatialBatchNormalization(nbOutputPlanes))
+            reducer:add(cudnn.ReLU(true))
+            conc:add(reducer)
+        end
         seq:add(conc)
         seq:add(nn.CAddTable())
         return seq
     end
-    --]]
 
+    --[[
     function createResidual(nbInputPlanes, nbInnerPlanes, nbOutputPlanes)
         local seq = nn.Sequential()
         local inner = nn.Sequential()
         inner:add(cudnn.SpatialConvolution(nbInputPlanes, nbInnerPlanes, 3, 3, 1, 1, 1, 1))
         inner:add(nn.SpatialBatchNormalization(nbInnerPlanes))
-        inner:add(nn.LeakyReLU(0.33, true))
+        inner:add(nn.PReLU())
         inner:add(cudnn.SpatialConvolution(nbInnerPlanes, nbInputPlanes, 3, 3, 1, 1, 1, 1))
         inner:add(nn.SpatialBatchNormalization(nbInputPlanes))
-        inner:add(nn.LeakyReLU(0.33, true))
+        inner:add(nn.PReLU())
 
         local conc = nn.ConcatTable(2)
         conc:add(inner)
-        conc:add(nn.Identity())
+        if nbInputPlanes == nbOutputPlanes then
+            conc:add(nn.Identity())
+        else
+            reducer = nn.Sequential()
+            seq:add(cudnn.SpatialConvolution(nbInnerPlanes, nbOutputPlanes, 1, 1, 1, 1, 0, 0))
+            seq:add(nn.SpatialBatchNormalization(nbOutputPlanes))
+            seq:add(nn.LeakyReLU(0.33, true))
+            conc:
+        end
         seq:add(conc)
         seq:add(nn.CAddTable())
 
@@ -316,6 +339,7 @@ function models.create_G_decoder_upsampling32c_residual(dimensions, noiseDim, cu
 
         return seq
     end
+    --]]
 
     local model = nn.Sequential()
 
@@ -326,26 +350,78 @@ function models.create_G_decoder_upsampling32c_residual(dimensions, noiseDim, cu
     -- 4x6
     model:add(nn.Linear(noiseDim, 512*4*6))
     model:add(nn.BatchNormalization(512*4*6))
-    model:add(nn.LeakyReLU(0.33, true))
+    model:add(cudnn.ReLU(true))
     model:add(nn.View(512, 4, 6))
 
     -- 4x6 -> 8x12
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(cudnn.SpatialConvolution(512, 512, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(512))
-    model:add(nn.LeakyReLU(0.33, true))
-    model:add(createResidual(512, 512, 256))
+    model:add(cudnn.SpatialConvolution(512, 256, 3, 3, 1, 1, 1, 1))
+    model:add(nn.SpatialBatchNormalization(256))
+    model:add(cudnn.ReLU(true))
 
     -- 8x12 -> 16x24
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(createResidual(256, 256, 128))
+    model:add(cudnn.SpatialConvolution(256, 128, 3, 3, 1, 1, 1, 1))
+    model:add(nn.SpatialBatchNormalization(128))
+    model:add(cudnn.ReLU(true))
 
     -- 16x24 -> 32x48
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(createResidual(128, 128, 64))
+    model:add(cudnn.SpatialConvolution(128, 64, 3, 3, 1, 1, 1, 1))
+    model:add(nn.SpatialBatchNormalization(64))
+    model:add(cudnn.ReLU(true))
+    model:add(createResidual(64, 32, 64))
+    model:add(createResidual(64, 32, 64))
+    model:add(createResidual(64, 32, 64))
+    model:add(createResidual(64, 32, 64))
 
     -- decrease to usually 3 dimensions (image channels)
     model:add(cudnn.SpatialConvolution(64, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.Sigmoid())
+
+    if cuda then
+        model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor', true, true))
+        model:cuda()
+    end
+
+    model = require('weight-init')(model, 'heuristic')
+
+    return model
+end
+
+function models.create_G_decoder_upsampling32d(dimensions, noiseDim, cuda)
+    local model = nn.Sequential()
+
+    if cuda then
+        model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor', true, true))
+    end
+
+    -- 4x4
+    model:add(nn.Linear(noiseDim, 512*4*6))
+    model:add(nn.BatchNormalization(512*4*6))
+    model:add(nn.PReLU(nil, nil, true))
+    model:add(nn.View(512, 4, 6))
+
+    -- 4x4 -> 8x8
+    model:add(nn.SpatialUpSamplingNearest(2))
+    model:add(cudnn.SpatialConvolution(512, 512, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(512))
+    model:add(nn.PReLU(nil, nil, true))
+
+    -- 8x8 -> 16x16
+    model:add(nn.SpatialUpSamplingNearest(2))
+    model:add(cudnn.SpatialConvolution(512, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(256))
+    model:add(nn.PReLU(nil, nil, true))
+
+    -- 16x16 -> 32x32
+    model:add(nn.SpatialUpSamplingNearest(2))
+    model:add(cudnn.SpatialConvolution(256, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(128))
+    model:add(nn.PReLU(nil, nil, true))
+    --model:add(nn.Dropout(0.5))
+
+    model:add(cudnn.SpatialConvolution(128, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     model:add(nn.Sigmoid())
 
     if cuda then
@@ -870,35 +946,35 @@ function models.create_D32f(dimensions, cuda)
 
     -- 32x48
     conv:add(cudnn.SpatialConvolution(dimensions[1], 64, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    conv:add(nn.LeakyReLU(0.33, true))
+    conv:add(nn.PReLU())
     conv:add(cudnn.SpatialConvolution(64, 64, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    conv:add(nn.LeakyReLU(0.33, true))
-    conv:add(nn.SpatialDropout(0.2))
+    conv:add(nn.PReLU())
+    conv:add(nn.SpatialDropout(0.25))
 
     -- 16x24
     conv:add(cudnn.SpatialConvolution(64, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    conv:add(nn.LeakyReLU(0.33, true))
+    conv:add(nn.PReLU())
     conv:add(cudnn.SpatialConvolution(128, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    conv:add(nn.LeakyReLU(0.33, true))
-    conv:add(nn.SpatialDropout(0.2))
+    conv:add(nn.PReLU())
+    conv:add(nn.SpatialDropout(0.25))
     conv:add(nn.SpatialAveragePooling(2, 2, 2, 2))
 
     -- 8x12
     conv:add(cudnn.SpatialConvolution(128, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    conv:add(nn.LeakyReLU(0.33, true))
+    conv:add(nn.PReLU())
     conv:add(nn.SpatialDropout(0.25))
-    conv:add(nn.SpatialMaxPooling(2, 2))
+    conv:add(nn.SpatialAveragePooling(2, 2, 2, 2))
 
     -- 4x6
     conv:add(cudnn.SpatialConvolution(256, 512, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    conv:add(nn.LeakyReLU(0.33, true))
+    conv:add(nn.PReLU())
     conv:add(nn.SpatialDropout(0.3))
     conv:add(nn.SpatialAveragePooling(2, 2, 2, 2))
 
     -- 2x3
     conv:add(nn.View(512*4*6))
     conv:add(nn.Linear(512*4*6, 64))
-    conv:add(nn.LeakyReLU(0.33, true))
+    conv:add(nn.PReLU())
     conv:add(nn.Linear(64, 1))
     conv:add(nn.Sigmoid())
 
