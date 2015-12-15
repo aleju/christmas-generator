@@ -24,7 +24,7 @@ OPT = lapp[[
   --D_sgd_momentum   (default 0)            D SGD momentum
   --G_sgd_momentum   (default 0)            G SGD momentum
   --batchSize        (default 32)           batch size
-  --N_epoch          (default 1000)         Number of examples per epoch (-1 means all)
+  --N_epoch          (default 960)          Number of examples per epoch (-1 means all)
   --G_L1             (default 0)            L1 penalty on the weights of G
   --G_L2             (default 0e-6)         L2 penalty on the weights of G
   --D_L1             (default 0e-7)         L1 penalty on the weights of D
