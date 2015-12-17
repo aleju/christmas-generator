@@ -40,14 +40,53 @@ OPT = lapp[[
   --gpu              (default 0)            gpu to run on (default cpu)
   --noiseDim         (default 100)          dimensionality of noise vector
   --window           (default 3)            window id of sample image
-  --height           (default 32)           height of images
-  --width            (default 48)           width of images
   --seed             (default 1)            seed for the RNG
-  --weightsVisFreq   (default 0)            how often to update the weight visualization (requires starting with qlua, 0 is off)
-  --aws                                     run in AWS mode
   --colorSpace       (default "rgb")        rgb|yuv|hsl|y
   --nopretraining                           Whether to deactivate loading of pretrained networks
+  --profile          (default "NONE")       snow32|snow64|trees32|trees64|baubles32|baubles64
 ]]
+
+--[[
+--height           (default 32)           height of images
+--width            (default 48)           width of images
+--]]
+
+assert(OPT.profile == "snow32"
+       or OPT.profile == "snow64"
+       or OPT.profile == "trees32"
+       or OPT.profile == "trees64"
+       or OPT.profile == "baubles32"
+       or OPT.profile == "baubles64",
+       "--profile must be 'snow32', 'snow64', 'trees32', 'trees64', 'baubles32' or 'baubles64'")
+
+if OPT.profile == "snow32" then
+    OPT.height = 32
+    OPT.width = 32+16
+    OPT.dataDirs = {"dataset/preprocessed/snowy-landscapes"}
+elseif OPT.profile == "snow64" then
+    OPT.height = 64
+    OPT.width = 64+32
+    OPT.dataDirs = {"dataset/preprocessed/snowy-landscapes"}
+elseif OPT.profile == "trees32" then
+    OPT.height = 32
+    OPT.width = 32
+    OPT.dataDirs = {"dataset/preprocessed/christmas-trees"}
+elseif OPT.profile == "trees64" then
+    OPT.height = 64
+    OPT.width = 64
+    OPT.dataDirs = {"dataset/preprocessed/christmas-trees"}
+elseif OPT.profile == "baubles32" then
+    OPT.height = 32
+    OPT.width = 32
+    OPT.dataDirs = {"dataset/preprocessed/baubles"}
+elseif OPT.profile == "baubles64" then
+    OPT.height = 64
+    OPT.width = 64
+    OPT.dataDirs = {"dataset/preprocessed/baubles"}
+else
+    error("Unknown profile name")
+end
+
 
 NORMALIZE = false
 if OPT.colorSpace == "y" then
@@ -87,12 +126,7 @@ DATASET.colorSpace = OPT.colorSpace
 DATASET.setFileExtension("jpg")
 DATASET.setHeight(IMG_DIMENSIONS[2])
 DATASET.setWidth(IMG_DIMENSIONS[3])
-
-if OPT.aws then
-    DATASET.setDirs({"/mnt/datasets/out_aug_64x64"})
-else
-    DATASET.setDirs({"dataset/preprocessed/snowy-landscapes"})
-end
+DATASET.setDirs(OPT.dataDirs)
 ----------------------------------------------------------------------
 
 -- run on gpu if chosen
@@ -114,11 +148,6 @@ function main()
     ----------------------------------------------------------------------
     -- Load / Define network
     ----------------------------------------------------------------------
-    --local filename = paths.concat(OPT.V_dir, string.format('v_%dx%dx%d.net', IMG_DIMENSIONS[1], IMG_DIMENSIONS[2], IMG_DIMENSIONS[3]))
-    --local tmp = torch.load(filename)
-    --MODEL_V = tmp.V
-    --MODEL_V:float()
-    --MODEL_V:evaluate() -- deactivate dropout
 
     -- load previous networks (D and G)
     -- or initialize them new
@@ -150,9 +179,6 @@ function main()
                 MODEL_D:float()
                 MODEL_G:float()
             end
-
-            --MODEL_D = MODELS.create_D(IMG_DIMENSIONS, OPT.gpu ~= false)
-            --MODEL_G = MODELS.create_G(IMG_DIMENSIONS, OPT.noiseDim, OPT.gpu ~= false)
         else
             --------------
             -- D
