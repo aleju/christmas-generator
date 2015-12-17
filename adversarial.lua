@@ -281,16 +281,20 @@ function adversarial.train(trainData, maxAccuracyD, accsInterval)
         -- display progress
         xlua.progress(t+thisBatchSize, N_epoch)
 
+        --[[
         if OPT.weightsVisFreq > 0 and batchIdx % OPT.weightsVisFreq == 0 then
             adversarial.visualizeNetwork(MODEL_D)
         end
+        --]]
     end
 
     -- time taken
     time = sys.clock() - time
-    print(string.format("<trainer> time required for this epoch = %d s", time))
-    print(string.format("<trainer> time to learn 1 sample = %f ms", 1000 * time/N_epoch))
-    print(string.format("<trainer> trained D %d of %d times.", countTrainedD, countTrainedD + countNotTrainedD))
+    --print(string.format("<trainer> time required for this epoch = %d s", time))
+    --print(string.format("<trainer> time to learn 1 sample = %f ms", 1000 * time/N_epoch))
+    if maxAccuracyD < 1.0 then
+        print(string.format("<trainer> trained D %d of %d times.", countTrainedD, countTrainedD + countNotTrainedD))
+    end
     --print(string.format("<trainer> adam learning rate D:%.5f | G:%.5f", OPTSTATE.adam.D.learningRate, OPTSTATE.adam.G.learningRate))
     --print(string.format("<trainer> adam learning rate D increased:%d decreased:%d", count_lr_increased_D, count_lr_decreased_D))
 
