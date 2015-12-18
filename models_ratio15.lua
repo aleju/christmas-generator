@@ -331,6 +331,130 @@ function models.create_G_decoder_upsampling32x48_residual(dimensions, noiseDim, 
     return model
 end
 
+function models.create_G_decoder_upsampling64x64_residual(dimensions, noiseDim, cuda)
+    function createResidual(nbInputPlanes, nbInnerPlanes, nbOutputPlanes)
+        local seq = nn.Sequential()
+        local inner = nn.Sequential()
+        inner:add(cudnn.SpatialConvolution(nbInputPlanes, nbInnerPlanes, 1, 1, 1, 1, 0, 0))
+        inner:add(nn.SpatialBatchNormalization(nbInnerPlanes))
+        inner:add(cudnn.ReLU(true))
+        inner:add(cudnn.SpatialConvolution(nbInnerPlanes, nbInnerPlanes, 3, 3, 1, 1, 1, 1))
+        inner:add(nn.SpatialBatchNormalization(nbInnerPlanes))
+        inner:add(cudnn.ReLU(true))
+        inner:add(cudnn.SpatialConvolution(nbInnerPlanes, nbOutputPlanes, 1, 1, 1, 1, 0, 0))
+        inner:add(nn.SpatialBatchNormalization(nbOutputPlanes))
+        inner:add(cudnn.ReLU(true))
+
+        local conc = nn.ConcatTable(2)
+        conc:add(inner)
+        if nbInputPlanes == nbOutputPlanes then
+            conc:add(nn.Identity())
+        else
+            reducer = nn.Sequential()
+            reducer:add(cudnn.SpatialConvolution(nbInputPlanes, nbOutputPlanes, 1, 1, 1, 1, 0, 0))
+            reducer:add(nn.SpatialBatchNormalization(nbOutputPlanes))
+            reducer:add(cudnn.ReLU(true))
+            conc:add(reducer)
+        end
+        seq:add(conc)
+        seq:add(nn.CAddTable())
+        return seq
+    end
+
+    local model = nn.Sequential()
+
+    if cuda then
+        model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor', true, true))
+    end
+
+    -- 8x8
+    model:add(nn.Linear(noiseDim, 512*8*8))
+    model:add(nn.BatchNormalization(512*8*8))
+    model:add(nn.PReLU())
+    model:add(nn.View(512, 8, 8))
+
+    -- 8x8 -> 16x16
+    model:add(nn.SpatialUpSamplingNearest(2))
+    model:add(cudnn.SpatialConvolution(512, 256, 3, 3, 1, 1, 1, 1))
+    model:add(nn.SpatialBatchNormalization(256))
+    model:add(nn.PReLU())
+
+    -- 16x16 -> 32x32
+    model:add(nn.SpatialUpSamplingNearest(2))
+    model:add(cudnn.SpatialConvolution(256, 128, 3, 3, 1, 1, 1, 1))
+    model:add(nn.SpatialBatchNormalization(128))
+    model:add(nn.PReLU())
+
+    -- 32x32 -> 64x64
+    model:add(nn.SpatialUpSamplingNearest(2))
+    model:add(cudnn.SpatialConvolution(128, 64, 3, 3, 1, 1, 1, 1))
+    model:add(nn.SpatialBatchNormalization(64))
+    model:add(nn.PReLU())
+
+    model:add(createResidual(64, 16, 64))
+    model:add(createResidual(64, 16, 64))
+    model:add(createResidual(64, 16, 64))
+    model:add(createResidual(64, 16, 64))
+    model:add(createResidual(64, 16, 64))
+
+    -- decrease to usually 3 dimensions (image channels)
+    model:add(cudnn.SpatialConvolution(64, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.Sigmoid())
+
+    if cuda then
+        model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor', true, true))
+        model:cuda()
+    end
+
+    model = require('weight-init')(model, 'heuristic')
+
+    return model
+end
+
+function models.create_G_decoder_upsampling64x64(dimensions, noiseDim, cuda)
+    local model = nn.Sequential()
+
+    if cuda then
+        model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor', true, true))
+    end
+
+    -- 8x8
+    model:add(nn.Linear(noiseDim, 512*8*8))
+    model:add(nn.BatchNormalization(512*8*8))
+    model:add(nn.PReLU(nil, nil, true))
+    model:add(nn.View(512, 8, 8))
+
+    -- 8x8 -> 16x16
+    model:add(nn.SpatialUpSamplingNearest(2))
+    model:add(cudnn.SpatialConvolution(512, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(256))
+    model:add(nn.PReLU())
+
+    -- 16x16 -> 32x32
+    model:add(nn.SpatialUpSamplingNearest(2))
+    model:add(cudnn.SpatialConvolution(256, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(128))
+    model:add(nn.PReLU())
+
+    -- 32x32 -> 64x64
+    model:add(nn.SpatialUpSamplingNearest(2))
+    model:add(cudnn.SpatialConvolution(128, 64, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(64))
+    model:add(nn.PReLU())
+
+    model:add(cudnn.SpatialConvolution(64, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.Sigmoid())
+
+    if cuda then
+        model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor', true, true))
+        model:cuda()
+    end
+
+    model = require('weight-init')(model, 'heuristic')
+
+    return model
+end
+
 -- Creates the decoder part of an upsampling height-32px G as an autoencoder.
 -- @param dimensions The dimensions of each image as {channels, height, width}.
 -- @param noiseDim Size of the hidden layer between encoder and decoder.
@@ -397,7 +521,24 @@ end
 -- @param dimensions The dimensions of each image as {channels, height, width}.
 -- @param noiseDim Size of the hidden layer between encoder and decoder.
 -- @returns nn.Sequential
-function models.create_G(dimensions, noiseDim, cuda)
+function models.create_G(profile, dimensions, noiseDim, cuda)
+    if profile == "snow32" then
+        return models.create_G_decoder_upsampling32x48(dimensions, noiseDim, cuda)
+    elseif profile == "snow64" then
+        return models.create_G_decoder_upsampling64x96(dimensions, noiseDim, cuda)
+    elseif profile == "trees32" then
+        return models.create_G_decoder_upsampling32x32(dimensions, noiseDim, cuda)
+    elseif profile == "trees64" then
+        return models.create_G_decoder_upsampling64x64_residual(dimensions, noiseDim, cuda)
+    elseif profile == "baubles32" then
+        return models.create_G_decoder_upsampling32x32(dimensions, noiseDim, cuda)
+    elseif profile == "trees64" then
+        return models.create_G_decoder_upsampling64x64(dimensions, noiseDim, cuda)
+    else
+        error("Unknown profile '" .. profile .. "'")
+    end
+
+    --[[
     local height = dimensions[2]
     local width = dimensions[3]
 
@@ -416,6 +557,7 @@ function models.create_G(dimensions, noiseDim, cuda)
     end
 
     error("No G known for dimensions " .. height .. "x" .. width)
+    --]]
 end
 
 -- Creates the G as an autoencoder (encoder+decoder).
@@ -450,7 +592,24 @@ end
 -- @param dimensions The dimensions of each image as {channels, height, width}.
 -- @param noiseDim Size of the hidden layer between encoder and decoder.
 -- @returns nn.Sequential
-function models.create_D(dimensions, cuda)
+function models.create_D(profile, dimensions, cuda)
+    if profile == "snow32" then
+        return models.create_D32x48(dimensions, cuda)
+    elseif profile == "snow64" then
+        return models.create_D64x96(dimensions, cuda)
+    elseif profile == "trees32" then
+        return models.create_D32x32(dimensions, cuda)
+    elseif profile == "trees64" then
+        return models.create_D64x64(dimensions, cuda)
+    elseif profile == "baubles32" then
+        return models.create_D32x32(dimensions, cuda)
+    elseif profile == "trees64" then
+        return models.create_D64x64(dimensions, cuda)
+    else
+        error("Unknown profile '" .. profile .. "'")
+    end
+
+    --[[
     local height = dimensions[2]
     local width = dimensions[3]
 
@@ -469,6 +628,7 @@ function models.create_D(dimensions, cuda)
     end
 
     error("No D known for dimensions " .. height .. "x" .. width)
+    --]]
 end
 
 function models.create_D32x32(dimensions, cuda)
@@ -549,6 +709,52 @@ function models.create_D32x48(dimensions, cuda)
     -- 2x3
     conv:add(nn.View(512*8*12))
     conv:add(nn.Linear(512*8*12, 64))
+    conv:add(nn.PReLU())
+    conv:add(nn.Linear(64, 1))
+    conv:add(nn.Sigmoid())
+
+    if cuda then
+        conv:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor', true, true))
+        conv:cuda()
+    end
+
+    conv = require('weight-init')(conv, 'heuristic')
+
+    return conv
+end
+
+function models.create_D64x64(dimensions, cuda)
+    local conv = nn.Sequential()
+    if cuda then
+        conv:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor', true, true))
+    end
+
+    -- 64x64
+    conv:add(nn.SpatialConvolution(dimensions[1], 256, 5, 5, 2, 2, (5-1)/2, (5-1)/2))
+    conv:add(nn.PReLU())
+    conv:add(nn.SpatialDropout(0.2))
+
+    -- 32x32
+    conv:add(nn.SpatialConvolution(256, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    conv:add(nn.PReLU())
+    conv:add(nn.SpatialDropout(0.2))
+    --conv:add(nn.SpatialAveragePooling(2, 2, 2, 2))
+
+    -- 32x32
+    conv:add(nn.SpatialConvolution(128, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    conv:add(nn.PReLU())
+    conv:add(nn.SpatialDropout(0.25))
+    conv:add(nn.SpatialMaxPooling(2, 2))
+
+    -- 16x16
+    conv:add(nn.SpatialConvolution(256, 512, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    conv:add(nn.PReLU())
+    conv:add(nn.SpatialDropout(0.4))
+    conv:add(nn.SpatialMaxPooling(2, 2))
+
+    -- 8x8
+    conv:add(nn.View(512*8*8))
+    conv:add(nn.Linear(512*8*8, 64))
     conv:add(nn.PReLU())
     conv:add(nn.Linear(64, 1))
     conv:add(nn.Sigmoid())
