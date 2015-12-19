@@ -157,6 +157,7 @@ function main()
         MODEL_D = tmp.D
         MODEL_G = tmp.G
         EPOCH = tmp.epoch + 1
+        VIS_NOISE_INPUTS = tmp.vis_noise_inputs
         if NORMALIZE then
             NORMALIZE_MEAN = tmp.normalize_mean
             NORMALIZE_STD = tmp.normalize_std
@@ -183,7 +184,7 @@ function main()
             --------------
             -- D
             --------------
-            MODEL_D = MODELS.create_D(IMG_DIMENSIONS, OPT.gpu ~= false)
+            MODEL_D = MODELS.create_D(OPT.profile, IMG_DIMENSIONS, OPT.gpu ~= false)
 
             --------------
             -- G
@@ -194,12 +195,13 @@ function main()
                 print("<trainer> loading pretrained G...")
                 local tmp = torch.load(g_pt_filename)
                 MODEL_G = tmp.G
+                MODEL_G:training()
                 if OPT.gpu == false then
                     MODEL_G:float()
                 end
             else
                 print("<trainer> Note: Did not find pretrained G")
-                MODEL_G = MODELS.create_G(IMG_DIMENSIONS, OPT.noiseDim, OPT.gpu ~= false)
+                MODEL_G = MODELS.create_G(OPT.profile, IMG_DIMENSIONS, OPT.noiseDim, OPT.gpu ~= false)
             end
         end
     end
@@ -258,7 +260,9 @@ function main()
         EPOCH = 1
     end
     PLOT_DATA = {}
-    VIS_NOISE_INPUTS = NN_UTILS.createNoiseInputs(100)
+    if VIS_NOISE_INPUTS == nil then
+        VIS_NOISE_INPUTS = NN_UTILS.createNoiseInputs(100)
+    end
 
     -- training loop
     while true do
@@ -298,7 +302,7 @@ function saveAs(filename)
     print(string.format("<trainer> saving network to %s", filename))
     NN_UTILS.prepareNetworkForSave(MODEL_G)
     NN_UTILS.prepareNetworkForSave(MODEL_D)
-    torch.save(filename, {D = MODEL_D, G = MODEL_G, opt = OPT, plot_data = PLOT_DATA, epoch = EPOCH, normalize_mean=NORMALIZE_MEAN, normalize_std=NORMALIZE_STD})
+    torch.save(filename, {D = MODEL_D, G = MODEL_G, opt = OPT, plot_data = PLOT_DATA, epoch = EPOCH, vis_noise_inputs = VIS_NOISE_INPUTS, normalize_mean=NORMALIZE_MEAN, normalize_std=NORMALIZE_STD})
 end
 
 main()
