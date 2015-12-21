@@ -419,30 +419,39 @@ function models.create_G_decoder_upsampling64x64(dimensions, noiseDim, cuda)
     end
 
     -- 8x8
-    model:add(nn.Linear(noiseDim, 512*8*8))
-    model:add(nn.BatchNormalization(512*8*8))
-    model:add(nn.PReLU(nil, nil, true))
-    model:add(nn.View(512, 8, 8))
+    model:add(nn.Linear(noiseDim, 256*8*8))
+    model:add(nn.BatchNormalization(256*8*8))
+    --model:add(nn.PReLU())
+    model:add(cudnn.ReLU(true))
+    model:add(nn.View(256, 8, 8))
+
+    model:add(cudnn.SpatialConvolution(256, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(256))
+    --model:add(nn.PReLU())
+    model:add(cudnn.ReLU(true))
 
     -- 8x8 -> 16x16
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(cudnn.SpatialConvolution(512, 512, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(512))
-    model:add(nn.PReLU())
+    model:add(cudnn.SpatialConvolution(256, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(256))
+    --model:add(nn.PReLU())
+    model:add(cudnn.ReLU(true))
 
     -- 16x16 -> 32x32
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(cudnn.SpatialConvolution(512, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(256))
-    model:add(nn.PReLU())
+    model:add(cudnn.SpatialConvolution(256, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(128))
+    --model:add(nn.PReLU())
+    model:add(cudnn.ReLU(true))
 
     -- 32x32 -> 64x64
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(cudnn.SpatialConvolution(256, 128, 5, 5, 1, 1, (5-1)/2, (5-1)/2))
-    model:add(nn.SpatialBatchNormalization(128))
-    model:add(nn.PReLU())
+    model:add(cudnn.SpatialConvolution(128, 64, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(64))
+    --model:add(nn.PReLU())
+    model:add(cudnn.ReLU(true))
 
-    model:add(cudnn.SpatialConvolution(128, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(cudnn.SpatialConvolution(64, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     model:add(nn.Sigmoid())
 
     if cuda then
@@ -730,15 +739,16 @@ function models.create_D64x64(dimensions, cuda)
     end
 
     -- 64x64
-    conv:add(nn.SpatialConvolution(dimensions[1], 256, 5, 5, 2, 2, (5-1)/2, (5-1)/2))
+    conv:add(nn.SpatialConvolution(dimensions[1], 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     conv:add(nn.PReLU())
     conv:add(nn.SpatialDropout(0.25))
+    conv:add(nn.SpatialAveragePooling(2, 2, 2, 2))
 
     -- 32x32
-    conv:add(nn.SpatialConvolution(256, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    conv:add(nn.SpatialConvolution(128, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     conv:add(nn.PReLU())
     conv:add(nn.SpatialDropout(0.25))
-    --conv:add(nn.SpatialAveragePooling(2, 2, 2, 2))
+    conv:add(nn.SpatialAveragePooling(2, 2, 2, 2))
 
     -- 32x32
     conv:add(nn.SpatialConvolution(128, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
@@ -753,8 +763,8 @@ function models.create_D64x64(dimensions, cuda)
     conv:add(nn.SpatialMaxPooling(2, 2))
 
     -- 8x8
-    conv:add(nn.View(512*8*8))
-    conv:add(nn.Linear(512*8*8, 64))
+    conv:add(nn.View(512*4*4))
+    conv:add(nn.Linear(512*4*4, 64))
     conv:add(nn.PReLU())
     conv:add(nn.Linear(64, 1))
     conv:add(nn.Sigmoid())
