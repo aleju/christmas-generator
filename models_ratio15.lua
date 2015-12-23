@@ -537,7 +537,7 @@ function models.create_G(profile, dimensions, noiseDim, cuda)
         return models.create_G_decoder_upsampling64x64(dimensions, noiseDim, cuda)
     elseif profile == "baubles32" then
         return models.create_G_decoder_upsampling32x32(dimensions, noiseDim, cuda)
-    elseif profile == "trees64" then
+    elseif profile == "baubles64" then
         return models.create_G_decoder_upsampling64x64(dimensions, noiseDim, cuda)
     else
         error("Unknown profile '" .. profile .. "'")
@@ -608,7 +608,7 @@ function models.create_D(profile, dimensions, cuda)
         return models.create_D64x64(dimensions, cuda)
     elseif profile == "baubles32" then
         return models.create_D32x32(dimensions, cuda)
-    elseif profile == "trees64" then
+    elseif profile == "baubles64" then
         return models.create_D64x64(dimensions, cuda)
     else
         error("Unknown profile '" .. profile .. "'")
