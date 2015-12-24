@@ -59,10 +59,7 @@ print("<trainer> starting gpu support...")
 require 'nn'
 require 'cutorch'
 require 'cunn'
-require 'LeakyReLU'
 require 'dpnn'
-require 'layers.cudnnSpatialConvolutionUpsample'
-require 'stn'
 if OPT.gpu then
     cutorch.setDevice(OPT.gpu + 1)
     cutorch.manualSeed(OPT.seed)
@@ -83,7 +80,7 @@ function main()
     if OPT.aws then
         DATASET.setDirs({"/mnt/datasets/out_aug_64x64"})
     else
-        DATASET.setDirs({"dataset/images_aug"})
+        DATASET.setDirs({"dataset/preprocessed/snowy-landscapes"})
     end
     ----------------------------------------------------------------------
 
