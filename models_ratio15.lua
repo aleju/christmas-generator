@@ -126,28 +126,31 @@ function models.create_G_decoder_upsampling32x32(dimensions, noiseDim, cuda)
     end
 
     -- 4x4
-    model:add(nn.Linear(noiseDim, 512*4*4))
-    model:add(nn.BatchNormalization(512*4*4))
-    model:add(nn.PReLU())
-    model:add(nn.View(512, 4, 4))
+    model:add(nn.Linear(noiseDim, 1024*4*4))
+    model:add(nn.BatchNormalization(1024*4*4))
+    model:add(cudnn.ReLU(true))
+    model:add(nn.View(1024, 4, 4))
 
     -- 4x4 -> 8x8
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(cudnn.SpatialConvolution(512, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(256))
-    model:add(nn.PReLU())
+    model:add(cudnn.SpatialConvolution(1024, 512, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(512))
+    model:add(cudnn.ReLU(true))
 
     -- 8x8 -> 16x16
     model:add(nn.SpatialUpSamplingNearest(2))
-    model:add(cudnn.SpatialConvolution(256, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(cudnn.SpatialConvolution(512, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     model:add(nn.SpatialBatchNormalization(256))
-    model:add(nn.PReLU())
+    model:add(cudnn.ReLU(true))
 
     -- 16x16 -> 32x32
     model:add(nn.SpatialUpSamplingNearest(2))
     model:add(cudnn.SpatialConvolution(256, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     model:add(nn.SpatialBatchNormalization(128))
-    model:add(nn.PReLU())
+    model:add(cudnn.ReLU(true))
+    model:add(cudnn.SpatialConvolution(128, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(128))
+    model:add(cudnn.ReLU(true))
 
     model:add(cudnn.SpatialConvolution(128, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     model:add(nn.Sigmoid())
@@ -643,26 +646,26 @@ function models.create_D32x32(dimensions, cuda)
     end
 
     -- 32x48
-    conv:add(nn.SpatialConvolution(dimensions[1], 256, 5, 5, 2, 2, (5-1)/2, (5-1)/2))
+    conv:add(nn.SpatialConvolution(dimensions[1], 64, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     conv:add(nn.PReLU())
-    conv:add(nn.SpatialDropout(0.2))
+    conv:add(nn.SpatialDropout(0.25))
 
     -- 16x24
-    conv:add(nn.SpatialConvolution(256, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    conv:add(nn.SpatialConvolution(64, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     conv:add(nn.PReLU())
-    conv:add(nn.SpatialDropout(0.2))
-    --conv:add(nn.SpatialAveragePooling(2, 2, 2, 2))
+    conv:add(nn.SpatialDropout(0.25))
+    conv:add(nn.SpatialAveragePooling(2, 2, 2, 2))
 
     -- 8x12
     conv:add(nn.SpatialConvolution(128, 256, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     conv:add(nn.PReLU())
-    conv:add(nn.SpatialDropout(0.2))
+    conv:add(nn.SpatialDropout(0.35))
     conv:add(nn.SpatialMaxPooling(2, 2))
 
     -- 4x6
     conv:add(nn.SpatialConvolution(256, 512, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     conv:add(nn.PReLU())
-    conv:add(nn.SpatialDropout(0.2))
+    conv:add(nn.SpatialDropout(0.5))
     --conv:add(nn.SpatialMaxPooling(2, 2))
 
     -- 2x3
