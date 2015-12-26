@@ -665,13 +665,18 @@ function models.create_D32x32(dimensions, cuda)
     -- 4x6
     conv:add(nn.SpatialConvolution(256, 512, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     conv:add(nn.PReLU())
+    conv:add(nn.SpatialDropout(0.35))
+
+    conv:add(nn.SpatialConvolution(512, 1024, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    conv:add(nn.PReLU())
     conv:add(nn.SpatialDropout(0.5))
-    --conv:add(nn.SpatialMaxPooling(2, 2))
+    conv:add(nn.SpatialMaxPooling(2, 2))
 
     -- 2x3
-    conv:add(nn.View(512*8*8))
-    conv:add(nn.Linear(512*8*8, 64))
+    conv:add(nn.View(1024*4*4))
+    conv:add(nn.Linear(1024*4*4, 64))
     conv:add(nn.PReLU())
+    conv:add(nn.Dropout(0.5))
     conv:add(nn.Linear(64, 1))
     conv:add(nn.Sigmoid())
 
