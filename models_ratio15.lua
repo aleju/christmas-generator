@@ -612,7 +612,7 @@ function models.create_D(profile, dimensions, cuda)
     elseif profile == "trees64" then
         return models.create_D64x64(dimensions, cuda)
     elseif profile == "baubles32" then
-        return models.create_D32x32(dimensions, cuda)
+        return models.create_D32x32b(dimensions, cuda)
     elseif profile == "baubles64" then
         return models.create_D64x64(dimensions, cuda)
     else
@@ -681,6 +681,42 @@ function models.create_D32x32(dimensions, cuda)
     conv:add(nn.View(512*4*4))
     conv:add(nn.Linear(512*4*4, 256))
     conv:add(nn.PReLU())
+    conv:add(nn.Dropout(0.25))
+    conv:add(nn.Linear(256, 1))
+    conv:add(nn.Sigmoid())
+
+    if cuda then
+        conv:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor', true, true))
+        conv:cuda()
+    end
+
+    conv = require('weight-init')(conv, 'heuristic')
+
+    return conv
+end
+
+function models.create_D32x32b(dimensions, cuda)
+    local conv = nn.Sequential()
+    if cuda then
+        conv:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor', true, true))
+    end
+
+    -- 32x32
+    conv:add(nn.Dropout(0.3))
+    conv:add(nn.SpatialConvolution(dimensions[1], 64, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    conv:add(nn.ELU())
+    conv:add(nn.SpatialDropout(0.25))
+
+    -- 32x32
+    conv:add(nn.SpatialConvolution(64, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    conv:add(nn.ELU())
+    conv:add(nn.Dropout(0.5))
+    conv:add(nn.SpatialMaxPooling(2, 2))
+
+    -- 16x16
+    conv:add(nn.View(128*16*16))
+    conv:add(nn.Linear(128*16*16, 256))
+    conv:add(nn.ELU())
     conv:add(nn.Dropout(0.25))
     conv:add(nn.Linear(256, 1))
     conv:add(nn.Sigmoid())
