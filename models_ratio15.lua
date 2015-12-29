@@ -167,6 +167,60 @@ function models.create_G_decoder_upsampling32x32(dimensions, noiseDim, cuda)
     return model
 end
 
+function models.create_G_decoder_upsampling32x32_branched(dimensions, noiseDim, cuda)
+    local model = nn.Sequential()
+
+    if cuda then
+        model:add(nn.Copy('torch.FloatTensor', 'torch.CudaTensor', true, true))
+    end
+
+    model:add(nn.Linear(noiseDim, 128))
+    model:add(cudnn.ReLU(true))
+
+    local conc = nn.Concat(2)
+    for i=1,4 do
+        local branch = nn.Sequential()
+
+        -- 8x8
+        branch:add(nn.Linear(128, 16*8*8))
+        branch:add(nn.BatchNormalization(16*8*8))
+        branch:add(cudnn.ReLU(true))
+        branch:add(nn.View(16, 8, 8))
+
+        -- 8x8 -> 16x16
+        branch:add(nn.SpatialUpSamplingNearest(2))
+        branch:add(cudnn.SpatialConvolution(16, 16, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+        branch:add(nn.SpatialBatchNormalization(16))
+        branch:add(cudnn.ReLU(true))
+
+        -- 16x16 -> 32x32
+        branch:add(nn.SpatialUpSamplingNearest(2))
+        branch:add(cudnn.SpatialConvolution(16, 16, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+        branch:add(nn.SpatialBatchNormalization(16))
+        branch:add(cudnn.ReLU(true))
+
+        conc:add(branch)
+    end
+
+    model:add(conc)
+
+    model:add(cudnn.SpatialConvolution(16*4, 32, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(nn.SpatialBatchNormalization(32))
+    model:add(cudnn.ReLU(true))
+
+    model:add(cudnn.SpatialConvolution(32, dimensions[1], 1, 1, 1, 1, 0, 0))
+    model:add(nn.Sigmoid())
+
+    if cuda then
+        model:add(nn.Copy('torch.CudaTensor', 'torch.FloatTensor', true, true))
+        model:cuda()
+    end
+
+    model = require('weight-init')(model, 'heuristic')
+
+    return model
+end
+
 function models.create_G_decoder_upsampling32x48(dimensions, noiseDim, cuda)
     local model = nn.Sequential()
 
@@ -541,7 +595,7 @@ function models.create_G(profile, dimensions, noiseDim, cuda)
     elseif profile == "trees64" then
         return models.create_G_decoder_upsampling64x64(dimensions, noiseDim, cuda)
     elseif profile == "baubles32" then
-        return models.create_G_decoder_upsampling32x32(dimensions, noiseDim, cuda)
+        return models.create_G_decoder_upsampling32x32_branched(dimensions, noiseDim, cuda)
     elseif profile == "baubles64" then
         return models.create_G_decoder_upsampling64x64(dimensions, noiseDim, cuda)
     else
@@ -702,7 +756,7 @@ function models.create_D32x32b(dimensions, cuda)
     end
 
     -- 32x32
-    conv:add(nn.Dropout(0.3))
+    --conv:add(nn.Dropout(0.3))
     conv:add(nn.SpatialConvolution(dimensions[1], 64, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     conv:add(nn.ELU())
     conv:add(nn.SpatialDropout(0.25))
@@ -710,8 +764,8 @@ function models.create_D32x32b(dimensions, cuda)
     -- 32x32
     conv:add(nn.SpatialConvolution(64, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     conv:add(nn.ELU())
-    conv:add(nn.Dropout(0.5))
     conv:add(nn.SpatialMaxPooling(2, 2))
+    conv:add(nn.Dropout(0.5))
 
     -- 16x16
     conv:add(nn.View(128*16*16))
