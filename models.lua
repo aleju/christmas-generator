@@ -178,7 +178,7 @@ function models.create_G_decoder_upsampling32x32_branched(dimensions, noiseDim, 
     model:add(cudnn.ReLU(true))
 
     local conc = nn.Concat(2)
-    for i=1,4 do
+    for i=1,8 do
         local branch = nn.Sequential()
 
         -- 8x8
@@ -204,7 +204,7 @@ function models.create_G_decoder_upsampling32x32_branched(dimensions, noiseDim, 
 
     model:add(conc)
 
-    model:add(cudnn.SpatialConvolution(16*4, 32, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
+    model:add(cudnn.SpatialConvolution(16*8, 32, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     model:add(nn.SpatialBatchNormalization(32))
     model:add(cudnn.ReLU(true))
 
