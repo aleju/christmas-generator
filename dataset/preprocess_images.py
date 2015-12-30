@@ -1,7 +1,6 @@
 """
-Creates an augmented version of the Labeled Faces in the Wild dataset.
-Run with:
-    python generate_dataset.py --path="/foo/bar/lfw"
+Creates augmented and size-normalized versions of the datasets
+(baubles, christmas trees, snowy landscapes).
 """
 from __future__ import print_function, division
 import os
@@ -12,44 +11,19 @@ from scipy import misc
 from scipy import ndimage
 from ImageAugmenter import create_aug_matrices
 from skimage import transform as tf
-from skimage import exposure
-import argparse
-import traceback
 
-random.seed(43)
-np.random.seed(43)
+random.seed(42)
+np.random.seed(42)
 
-DATASETS = ["baubles", "christmas-trees", "snowy-landscapes"]
-
-"""
-KW_CHRISTMAS_BAUBLES = "christmas%20baubles"
-KW_CHRISTMAS_TREE_ROOM = "christmas%20tree%20room"
-KW_SNOW_FOREST = "snow%20forest"
-KW_SNOW_LANDSCAPE = "snow%20landscape"
-KW_SNOW_OUTDOOR = "snow%20outdoor"
-KW_SNOW_OUTDOORS = "snow%20outdoors"
-KW_SNOW_PLANT = "snow%20plant"
-KW_SNOW_TREE = "snow%20tree"
-"""
-
-#KEYWORDS = [KW_SNOW_LANDSCAPE, KW_CHRISTMAS_TREE_ROOM, KW_CHRISTMAS_BAUBLES]
-#KEYWORDS = [KW_SNOW_LANDSCAPE, KW_SNOW_OUTDOOR, KW_SNOW_OUTDOORS, KW_SNOW_PLANT, KW_SNOW_TREE]
-#KEYWORDS = ["snowy-landscapes", KW_SNOW_PLANT]
-#KEYWORDS = ["christmas-trees"]
-#KEYWORDS = ["baubles"]
 FILE_DIR = os.path.dirname(os.path.realpath(__file__))
-#READ_MAIN_DIR = os.path.join(MAIN_DIR, "downloaded/")
 READ_MAIN_DIR = os.path.join(FILE_DIR, "downloaded/")
-#READ_MAIN_DIR = "/media/aj/grab/ml/datasets/flickr-sky"
-WRITE_MAIN_DIR = os.path.join(MAIN_DIR, "preprocessed/")
-
+WRITE_MAIN_DIR = os.path.join(FILE_DIR, "preprocessed/")
+DATASETS = ["baubles", "christmas-trees", "snowy-landscapes"]
 SCALES = {
     "baubles": (64, 64),
     "christmas-trees": (64, 64),
     "snowy-landscapes": (64, 64+32)
 }
-#ASPECT_RATIO = 1.5
-#EPSILON = 0.1
 AUGMENTATIONS = {
     "baubles": {
         "n": 8, "hflip": True, "vflip": False,
@@ -74,20 +48,9 @@ AUGMENTATIONS = {
     }
 }
 
-PADDING = 20
-
 def main():
-    """Main method that reads the images, augments and saves them."""
-    """
-    parser = argparse.ArgumentParser(description="Create augmented version of LFW.")
-    parser.add_argument("--path", required=True, help="Path to your LFW dataset directory")
-    args = parser.parse_args()
-
-    path = args.path
-    if path.endswith("/"):
-        path = path[0:len(path)-1]
-    """
-
+    """Main method that reads the images, augments them, normalizes
+    their size and then saves them."""
     nb_processed = 0
     for dataset_name in DATASETS:
         print("-----------------")
@@ -103,9 +66,12 @@ def main():
 
         errors = []
 
-        scale_height, scale_width  = SCALES[dataset_name]
+        scale_height, scale_width = SCALES[dataset_name]
         target_aspect_ratio = scale_width / scale_height
 
+        # iterate over every image in the current dataset,
+        # augment that image N times, add cols/rows until target aspect ratio
+        # is reached, resize it (e.g. 64x64), save it
         for img_idx, (image_filepath, image) in enumerate(zip(dataset.fps, dataset.get_images())):
             print("[%s] Image %d of %d (%.2f%%)..." \
                   % (dataset_name, img_idx+1, len(dataset.fps),
@@ -120,39 +86,29 @@ def main():
                     % (image_filepath, img_idx, dataset_name)
                 ))
             else:
-                # Contrast stretching
-                #image = np.rollaxis(image, 2, 0)
-                #p2, p98 = np.percentile(image, (2, 98))
-                #image = exposure.rescale_intensity(image, in_range=(p2, p98))
-                #image = exposure.equalize_adapthist(image, clip_limit=0.03)
-                #image = np.rollaxis(image, 0, 3)
-
-                # equalize_adapthist converts to float64 0-1
-                #image = image * 255.0
-                #image = image.astype(np.uint8)
-
+                # resize too big images to smaller ones before any augmentation
+                # (for performance reasons)
                 height = image.shape[0]
                 width = image.shape[1]
                 aspect_ratio = width / height
                 if width > 1000 or height > 1000:
                     image = misc.imresize(image, (1000, int(1000 * aspect_ratio)))
 
+                # augment image
+                # converts augmented versions automatically to float32, 0-1
+                augmentations = augment(image, **AUGMENTATIONS[dataset_name])
+
+                # create list of original image + augmented versions
                 images_aug = [image / 255.0]
-                augmentations = augment(image, **AUGMENTATIONS[dataset_name]) # converts to float32, 0-1
                 images_aug.extend(augmentations)
 
+                # for each augmented version of the images:
+                # resize it to target aspect ratio (e.g. same width and height),
+                # save it
                 for aug_idx, image_aug in enumerate(images_aug):
-                    #print("Aspect ratio: %.2f" % (image_aug.shape[1] / image_aug.shape[0]))
-                    #misc.imshow(image_aug)
                     image_aug = to_aspect_ratio_add(image_aug, target_aspect_ratio)
-
-                    #misc.imshow(image_aug)
-                    #misc.imshow(crop)
-                    #print("New aspect ratio: %.2f" % (image_aug.shape[1] / image_aug.shape[0]))
-
                     filename = "{:0>6}_{:0>3}.jpg".format(img_idx, aug_idx)
                     img_scaled = misc.imresize(image_aug, (scale_height, scale_width))
-                    #misc.imshow(img_scaled)
                     misc.imsave(os.path.join(dataset_dir, filename), img_scaled)
 
             nb_processed += 1
@@ -214,6 +170,7 @@ def to_aspect_ratio_add(image, target_ratio):
 
     return image
 
+# currently not used in this script, only the _add method above is used
 def to_aspect_ratio_add_and_remove(image, target_ratio):
     """Add and remove cols/rows from an image so that it matches an aspect ratio.
     Args:
@@ -371,7 +328,7 @@ class Dataset(object):
         for one_dir in self.dirs:
             for root, dirnames, filenames in os.walk(one_dir):
                 for filename in filenames:
-                    if re.search("\.(jpg|jpeg|png|bmp|tiff)$", filename):
+                    if re.search(r"\.(jpg|jpeg|png|bmp|tiff)$", filename):
                         image_filepaths.add(os.path.join(root, filename))
         image_filepaths = sorted(list(image_filepaths))
         return image_filepaths
