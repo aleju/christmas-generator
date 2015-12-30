@@ -7,7 +7,7 @@ if not ok then print('display not found. unable to plot') end
 ADVERSARIAL = require 'adversarial'
 DATASET = require 'dataset'
 NN_UTILS = require 'utils.nn_utils'
-MODELS = require 'models_ratio15'
+MODELS = require 'models'
 
 
 ----------------------------------------------------------------------
@@ -236,8 +236,12 @@ function main()
     -- Set optimizer states
     OPTSTATE = {
         adagrad = {
+            --[[
             D = { learningRate = 1e-3 },
             G = { learningRate = 1e-3 * 3 }
+            --]]
+            D = {},
+            G = {}
         },
         adadelta = { D = {}, G = {} },
         adamax = { D = {}, G = {} },

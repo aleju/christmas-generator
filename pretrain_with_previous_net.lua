@@ -7,7 +7,7 @@ ok, DISP = pcall(require, 'display')
 if not ok then print('display not found. unable to plot') end
 DATASET = require 'dataset'
 NN_UTILS = require 'utils.nn_utils'
-MODELS = require 'models_ratio15'
+MODELS = require 'models'
 
 OPT = lapp[[
     --save          (default "logs")
