@@ -46,11 +46,6 @@ OPT = lapp[[
   --profile          (default "NONE")       snow32|snow64|trees32|trees64|baubles32|baubles64
 ]]
 
---[[
---height           (default 32)           height of images
---width            (default 48)           width of images
---]]
-
 assert(OPT.profile == "snow32"
        or OPT.profile == "snow64"
        or OPT.profile == "trees32"
