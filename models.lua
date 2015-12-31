@@ -5,119 +5,6 @@ require 'cudnn'
 
 local models = {}
 
--- Creates the encoder part of G as an autoencoder.
--- @param dimensions The dimensions of each image as {channels, height, width}.
--- @param noiseDim Size of the hidden layer between encoder and decoder.
--- @returns nn.Sequential
-function models.create_G_encoder16(dimensions, noiseDim)
-    local model = nn.Sequential()
-    local activation = nn.LeakyReLU
-
-    model:add(nn.SpatialConvolution(dimensions[1], 32, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(32))
-    model:add(activation())
-
-    model:add(nn.SpatialConvolution(32, 32, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(32))
-    model:add(activation())
-    model:add(nn.SpatialMaxPooling(2, 2))
-
-    model:add(nn.SpatialConvolution(32, 64, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(64))
-    model:add(activation())
-    model:add(nn.SpatialMaxPooling(2, 2))
-
-    model:add(nn.SpatialConvolution(64, 64, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(64))
-    model:add(activation())
-
-    model:add(nn.View(64 * 0.25 * 0.25 * dimensions[2] * dimensions[3]))
-    model:add(nn.Linear(64 * 0.25 * 0.25 * dimensions[2] * dimensions[3], 512))
-    model:add(nn.BatchNormalization(512))
-    model:add(activation())
-    model:add(nn.Linear(512, noiseDim))
-    --model:add(nn.Dropout(0.2))
-
-    model = require('weight-init')(model, 'heuristic')
-
-    return model
-end
-
--- Creates the encoder part of G as an autoencoder.
--- @param dimensions The dimensions of each image as {channels, height, width}.
--- @param noiseDim Size of the hidden layer between encoder and decoder.
--- @returns nn.Sequential
-function models.create_G_encoder32(dimensions, noiseDim)
-    local model = nn.Sequential()
-    local activation = nn.LeakyReLU
-
-    model:add(nn.SpatialConvolution(dimensions[1], 16, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(16))
-    model:add(activation())
-    model:add(nn.SpatialMaxPooling(2, 2))
-
-    model:add(nn.SpatialConvolution(16, 16, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(16))
-    model:add(activation())
-    model:add(nn.SpatialMaxPooling(2, 2))
-
-    model:add(nn.SpatialConvolution(16, 32, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(32))
-    model:add(activation())
-    model:add(nn.SpatialMaxPooling(2, 2))
-
-    model:add(nn.SpatialConvolution(32, 32, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(32))
-    model:add(activation())
-
-    model:add(nn.View(32 * 0.25 * 0.25 * 0.25 * dimensions[2] * dimensions[3]))
-    model:add(nn.Linear(32 * 0.25 * 0.25 * 0.25 * dimensions[2] * dimensions[3], 1024))
-    model:add(nn.BatchNormalization(1024))
-    model:add(activation())
-    model:add(nn.Linear(1024, noiseDim))
-    --model:add(nn.Dropout(0.2))
-
-    model = require('weight-init')(model, 'heuristic')
-
-    return model
-end
-
-function models.create_G_encoder64(dimensions, noiseDim)
-    local model = nn.Sequential()
-    local activation = nn.LeakyReLU
-
-    model:add(nn.SpatialConvolution(dimensions[1], 16, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(16))
-    model:add(activation())
-    model:add(nn.SpatialMaxPooling(2, 2))
-
-    model:add(nn.SpatialConvolution(16, 16, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(16))
-    model:add(activation())
-    model:add(nn.SpatialMaxPooling(2, 2))
-
-    model:add(nn.SpatialConvolution(16, 32, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(32))
-    model:add(activation())
-    model:add(nn.SpatialMaxPooling(2, 2))
-
-    model:add(nn.SpatialConvolution(32, 32, 3, 3, 1, 1, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(32))
-    model:add(activation())
-    model:add(nn.SpatialMaxPooling(2, 2))
-
-    model:add(nn.View(32 * 0.25 * 0.25 * 0.25 * 0.25 * dimensions[2] * dimensions[3]))
-    model:add(nn.Linear(32 * 0.25 * 0.25 * 0.25 * 0.25 * dimensions[2] * dimensions[3], 1024))
-    model:add(nn.BatchNormalization(1024))
-    model:add(activation())
-    model:add(nn.Linear(1024, noiseDim))
-    --model:add(nn.Dropout(0.2))
-
-    model = require('weight-init')(model, 'heuristic')
-
-    return model
-end
-
 function models.create_G_decoder_upsampling32x32(dimensions, noiseDim, cuda)
     local model = nn.Sequential()
 
@@ -148,11 +35,6 @@ function models.create_G_decoder_upsampling32x32(dimensions, noiseDim, cuda)
     model:add(cudnn.SpatialConvolution(256, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     model:add(nn.SpatialBatchNormalization(128))
     model:add(cudnn.ReLU(true))
-    --[[
-    model:add(cudnn.SpatialConvolution(128, 128, 3, 3, 1, 1, (3-1)/2, (3-1)/2))
-    model:add(nn.SpatialBatchNormalization(128))
-    model:add(cudnn.ReLU(true))
-    --]]
 
     model:add(cudnn.SpatialConvolution(128, dimensions[1], 3, 3, 1, 1, (3-1)/2, (3-1)/2))
     model:add(nn.Sigmoid())
@@ -305,41 +187,6 @@ function models.create_G_decoder_upsampling32x48_residual(dimensions, noiseDim, 
         seq:add(nn.CAddTable())
         return seq
     end
-
-    --[[
-    function createResidual(nbInputPlanes, nbInnerPlanes, nbOutputPlanes)
-        local seq = nn.Sequential()
-        local inner = nn.Sequential()
-        inner:add(cudnn.SpatialConvolution(nbInputPlanes, nbInnerPlanes, 3, 3, 1, 1, 1, 1))
-        inner:add(nn.SpatialBatchNormalization(nbInnerPlanes))
-        inner:add(nn.PReLU())
-        inner:add(cudnn.SpatialConvolution(nbInnerPlanes, nbInputPlanes, 3, 3, 1, 1, 1, 1))
-        inner:add(nn.SpatialBatchNormalization(nbInputPlanes))
-        inner:add(nn.PReLU())
-
-        local conc = nn.ConcatTable(2)
-        conc:add(inner)
-        if nbInputPlanes == nbOutputPlanes then
-            conc:add(nn.Identity())
-        else
-            reducer = nn.Sequential()
-            seq:add(cudnn.SpatialConvolution(nbInnerPlanes, nbOutputPlanes, 1, 1, 1, 1, 0, 0))
-            seq:add(nn.SpatialBatchNormalization(nbOutputPlanes))
-            seq:add(nn.LeakyReLU(0.33, true))
-            conc:
-        end
-        seq:add(conc)
-        seq:add(nn.CAddTable())
-
-        if nbInnerPlanes ~= nbOuterPlanes then
-            seq:add(cudnn.SpatialConvolution(nbInnerPlanes, nbOutputPlanes, 1, 1, 1, 1, 0, 0))
-            seq:add(nn.SpatialBatchNormalization(nbOutputPlanes))
-            seq:add(nn.LeakyReLU(0.33, true))
-        end
-
-        return seq
-    end
-    --]]
 
     local model = nn.Sequential()
 
@@ -601,56 +448,7 @@ function models.create_G(profile, dimensions, noiseDim, cuda)
     else
         error("Unknown profile '" .. profile .. "'")
     end
-
-    --[[
-    local height = dimensions[2]
-    local width = dimensions[3]
-
-    if height == 32 then
-        if width == 32 then
-            return models.create_G_decoder_upsampling32x32(dimensions, noiseDim, cuda)
-        elseif width == 48 then
-            return models.create_G_decoder_upsampling32x48(dimensions, noiseDim, cuda)
-        end
-    elseif height == 64 then
-        if width == 64 then
-            return models.create_G_decoder_upsampling64x64(dimensions, noiseDim, cuda)
-        elseif height == 96 then
-            return models.create_G_decoder_upsampling64x96(dimensions, noiseDim, cuda)
-        end
-    end
-
-    error("No G known for dimensions " .. height .. "x" .. width)
-    --]]
 end
-
--- Creates the G as an autoencoder (encoder+decoder).
--- @param dimensions The dimensions of each image as {channels, height, width}.
--- @param noiseDim Size of the hidden layer between encoder and decoder.
--- @returns nn.Sequential
---[[
-function models.create_G_autoencoder(dimensions, noiseDim, cuda)
-    local model = nn.Sequential()
-
-    if dimensions[2] == 16 then
-        model:add(models.create_G_encoder16(dimensions, noiseDim, cuda))
-    elseif dimensions[2] == 32 then
-        model:add(models.create_G_encoder32(dimensions, noiseDim, cuda))
-    else
-        model:add(models.create_G_encoder64(dimensions, noiseDim, cuda))
-    end
-
-    if dimensions[2] == 16 then
-        model:add(models.create_G_decoder_upsampling16(dimensions, noiseDim, cuda))
-    elseif dimensions[2] == 32 then
-        model:add(models.create_G_decoder_upsampling32c_residual(dimensions, noiseDim, cuda))
-    else
-        model:add(models.create_G_decoder_upsampling64(dimensions, noiseDim, cuda))
-    end
-
-    return model
-end
---]]
 
 -- Creates D.
 -- @param dimensions The dimensions of each image as {channels, height, width}.
@@ -672,27 +470,6 @@ function models.create_D(profile, dimensions, cuda)
     else
         error("Unknown profile '" .. profile .. "'")
     end
-
-    --[[
-    local height = dimensions[2]
-    local width = dimensions[3]
-
-    if height == 32 then
-        if width == 32 then
-            return models.create_D32x32(dimensions, cuda)
-        elseif width == 48 then
-            return models.create_D32x48(dimensions, cuda)
-        end
-    elseif height == 64 then
-        if width == 64 then
-            return models.create_D64x64(dimensions, cuda)
-        elseif height == 96 then
-            return models.create_D64x96(dimensions, cuda)
-        end
-    end
-
-    error("No D known for dimensions " .. height .. "x" .. width)
-    --]]
 end
 
 function models.create_D32x32(dimensions, cuda)
