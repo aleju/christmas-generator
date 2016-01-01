@@ -2,8 +2,11 @@ commands.txt
 logs/*.net
 logs/*.net.old
 logs/images/*.jpg
+logs/images/*.png
 logs/images_good/*.jpg
+logs/images_good/*.png
 logs/images_bad/*.jpg
+logs/images_bad/*.png
 logs/trees64_3_e1230
 samples/*.jpg
 samples/adversarial_*/
