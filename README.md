@@ -4,7 +4,7 @@ This project generates new christmas-related images using the technique of gener
 
 # Results
 
-Three datasets were used during the training: Images of baubles (the spheres on christmas trees), images of whole christmas trees (in rooms) and images of landscapes with snow. Some training runs were done in grayscale mode to decrease the difficulty of the problem. Exact architectures of each model can be viewed in `images/architectures.txt`.
+Three datasets were used during the training: Images of baubles (the spheres on christmas trees), images of whole christmas trees (in rooms) and images of landscapes with snow. The datasets were created specifically for this project by gathering images from [flickr](http://www.flickr.com) using relevant search terms and manually cleaning up the results afterwards. All datasets were augmented to several times their original size. Some training runs were done in grayscale mode to decrease the difficulty of the problem. Exact architectures of each model can be viewed in `images/architectures.txt`.
 
 ## Baubles (2475 images)
 
@@ -31,6 +31,10 @@ This dataset worked pretty well. The variance of the main eye catcher (the tree)
 **Generated images (examples):**
 
 ![Generated images](images/trees64_3_e1230_rnd256.jpg?raw=true "Generated images")
+
+**Training video:**
+
+[![Training progress video](images/christmas-trees-youtube.jpg?raw=true)](https://youtu.be/EOylC-JsLFE)
 
 ## Snowy Landscapes (10201 images)
 
