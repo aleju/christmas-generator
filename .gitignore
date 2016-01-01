@@ -1,3 +1,21 @@
+commands.txt
+logs/*.net
+logs/*.net.old
+logs/images/*.jpg
+logs/images_good/*.jpg
+logs/images_bad/*.jpg
+logs/trees64_3_e1230
+samples/*.jpg
+samples/adversarial_*/
+dataset/*.pyc
+dataset/downloaded
+dataset/preprocessed
+dataset/baubles
+dataset/christmas-trees
+dataset/snowy-landscapes
+dataset/create_image_lists.py
+dataset/downloader.py
+
 # Compiled Lua sources
 luac.out
 
