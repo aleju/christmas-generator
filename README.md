@@ -88,3 +88,9 @@ To train a network:
 You can watch how the results of the network improve in the opened browser window. The training will continue until you stop it manually. By default the network is saved every 30 epochs. It also saves images at every epoch in `logs/images`, `logs/images_good` and `logs/images_bad`. Those images can take up quite some space over time, so keep an eye on it.
 You can continue a training run at a later time by adding `--network="logs/adversarial.net"` as a parameter.
 You can sample images from a trained network using `th sample.lua --profile="baubles32"` (analogous for the profiles `baubles64`, `trees32`, ...).
+
+# Lessons learned
+
+* Even in the case of low variance datasets 2k images seem to not be enough to generate images very few errors. Aim at >5k.
+* For high variance datasets even 10k seem to not be enough.
+* Evade cleaning up manually results downloaded from flickr. Takes ages of time.
