@@ -2,10 +2,8 @@ require 'paths'
 require 'nn'
 require 'cutorch'
 require 'cunn'
-require 'LeakyReLU'
+require 'cudnn'
 require 'dpnn'
-require 'layers.cudnnSpatialConvolutionUpsample'
-require 'stn'
 
 OPT = lapp[[
   --save                (default "logs")                subdirectory in which the model is saved
