@@ -1,6 +1,6 @@
 # About
 
-This project generates new christmas-related images using the technique of generative adversarial networks (GAN).
+This project generates new christmas-related images using the technique of generative adversarial networks ([GAN](http://papers.nips.cc/paper/5423-generative-adversarial-nets)). The used architectures mostly match the one described in the [DCGAN](http://arxiv.org/abs/1511.06434) paper.
 
 # Results
 
@@ -8,12 +8,14 @@ Three datasets were used during the training: Images of baubles (the spheres on 
 
 ## Baubles (2475 images)
 
-This dataset turned out to be very hard to generate. The number of example images was low while the variance was apparently high, resulting in the network being unable to correctly learn a generalizing function. That was the case for both 64x64 and 32x32 images (in many different tested architectures).
+This dataset turned out to be very hard to generate. The number of example images was low while the variance was (apparently) high, resulting in the network being unable to correctly learn a generalizing function. That was the case for both 64x64 and 32x32 images (in many different tested architectures). No architecture produced a significant amount of images that clearly resembled baubles. From the perspective of a human that seems odd, as the dataset didn't appear to be *that* difficult: Learn a greenish background texture, learn 1 to 10 different bauble styles, place 1 to 4 baubles randomly in the image - that should already be enough, but somehow no network managed to do it. I tried shallow architectures for D (and high dropout rates), so it was probably not related to D memorizing the dataset. Maybe these networks have problems with drawing perfect spheres. Or maybe it's related to how hard it sometimes is to spot the baubles in the images (e.g. glass baubles or greenish baubles). Or maybe the variance was really just too high.
 
 ![Example images from the training set](images/baubles_64x64_2_trainset.jpg?raw=true "Example images from the training set")
-*Training set (excerpt).*
+
+*_Training set_ (excerpt).*
 
 ![Generated images](images/baubles_64x64_2_best.jpg?raw=true "Generated images")
+
 *Examples of generated images. You can see some indication that it starts to learn what baubles look like, but it's still rather far off.*
 
 ## Christmas Trees (2090 images)
@@ -21,9 +23,11 @@ This dataset turned out to be very hard to generate. The number of example image
 This dataset worked pretty well. The variance of the main eye catcher (the tree) is rather low. The rooms in the background are mostly wrong/broken, but that's not easily noticeable from far away, only when zoomed in. Many trees are also partly broken - again, not easy to see when zoomed out. The network sometimes accidently generates two trees instead of one. At least the errors regarding the trees would probably go away with more example images.
 
 ![Example images from the training set](images/trees_trainset.jpg?raw=true "Example images from the training set")
-*Training set (excerpt).*
+
+*_Training set_ (excerpt).*
 
 ![Generated images](images/trees64_3_e1230_rnd256.jpg?raw=true "Generated images")
+
 *Examples of generated images.*
 
 ## Snowy Landscapes (10201 images)
@@ -31,17 +35,21 @@ This dataset worked pretty well. The variance of the main eye catcher (the tree)
 This dataset had pretty high variance, but also contained more images than the other two datasets. The generated images are not great, but not completely horrible either. Tried a lot of architectures, including deep residual generators, but in the end fairly standard architectures produced the best results.
 
 ![Example images from the training set](images/snow_gray_trainset.jpg?raw=true "Example images from the training set")
-*Training set (excerpt, grayscale run).*
+
+*_Training set_ (excerpt, grayscale run).*
 
 ![Generated images](images/snow_64x96_2_e1380_rnd256.jpg?raw=true "Generated images")
+
 *Examples of generated images (grayscale run).*
 
 
 
 ![Example images from the training set](images/snow_color_trainset.jpg?raw=true "Example images from the training set")
-*Training set (excerpt, color run).*
+
+*_Training set_ (excerpt, color run).*
 
 ![Generated images](images/snow_64x96_rnd256.jpg?raw=true "Generated images")
+
 *Examples of generated images (color run).*
 
 # Usage
@@ -50,7 +58,7 @@ Requirements are:
 * Torch
   * Required packages (most of them should be part of the default torch install, install missing ones with `luarocks install packageName`): `cudnn`, `nn`, `pl`, `paths`, `image`, `optim`, `cutorch`, `cunn`, `cudnn`, `dpnn`, `display`
 * Python 2.7 (might work with newer versions, not tested)
-  * skimage
+  * scikit-image
   * scipy
   * numpy
 * NVIDIA GPU with cudnn3 and 4GB or more memory
@@ -72,6 +80,6 @@ To train a network:
   * `th train.lua --profile="snow32"` - Train a network to generate images of snowy landscapes in resolution 32x48
   * `th train.lua --profile="snow64"` - Train a network to generate images of snowy landscapes in resolution 64x96
 
-You can watch how the results of the network improve in the opened browser window. The training will continue until you stop it manually. By default the network is saved every 30 epochs.
+You can watch how the results of the network improve in the opened browser window. The training will continue until you stop it manually. By default the network is saved every 30 epochs. It also saves images at every epoch in `logs/images`, `logs/images_good` and `logs/images_bad`. Those images can take up quite some space over time, so keep an eye on it.
 You can continue a training run at a later time by adding `--network="logs/adversarial.net"` as a parameter.
 You can sample images from a trained network using `th sample.lua --profile="baubles32"` (analogous for the profiles `baubles64`, `trees32`, ...).
