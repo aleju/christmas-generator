@@ -10,9 +10,11 @@ Three datasets were used during the training: Images of baubles (the spheres on 
 
 This dataset turned out to be very hard to generate. The number of example images was low while the variance was (apparently) high, resulting in the network being unable to correctly learn a generalizing function. That was the case for both 64x64 and 32x32 images (in many different tested architectures). No architecture produced a significant amount of images that clearly resembled baubles. From the perspective of a human that seems odd, as the dataset didn't appear to be *that* difficult: Learn a greenish background texture, learn 1 to 10 different bauble styles, place 1 to 4 baubles randomly in the image - that should already be enough, but somehow no network managed to do it. I tried shallow architectures for D (and high dropout rates), so it was probably not related to D memorizing the dataset. Maybe these networks have problems with drawing perfect spheres. Or maybe it's related to how hard it sometimes is to spot the baubles in the images (e.g. glass baubles or greenish baubles). Or maybe the variance was really just too high.
 
+**Training set (excerpt):**
+
 ![Example images from the training set](images/baubles_64x64_2_trainset.jpg?raw=true "Example images from the training set")
 
-*_Training set_ (excerpt).*
+**Generated images (examples):**
 
 ![Generated images](images/baubles_64x64_2_best.jpg?raw=true "Generated images")
 
@@ -22,35 +24,34 @@ This dataset turned out to be very hard to generate. The number of example image
 
 This dataset worked pretty well. The variance of the main eye catcher (the tree) is rather low. The rooms in the background are mostly wrong/broken, but that's not easily noticeable from far away, only when zoomed in. Many trees are also partly broken - again, not easy to see when zoomed out. The network sometimes accidently generates two trees instead of one. At least the errors regarding the trees would probably go away with more example images.
 
+**Training set (excerpt):**
+
 ![Example images from the training set](images/trees_trainset.jpg?raw=true "Example images from the training set")
 
-*_Training set_ (excerpt).*
+**Generated images (examples):**
 
 ![Generated images](images/trees64_3_e1230_rnd256.jpg?raw=true "Generated images")
-
-*Examples of generated images.*
 
 ## Snowy Landscapes (10201 images)
 
 This dataset had pretty high variance, but also contained more images than the other two datasets. The generated images are not great, but not completely horrible either. Tried a lot of architectures, including deep residual generators, but in the end fairly standard architectures produced the best results.
 
+**Training set (excerpt, grayscale run):**
+
 ![Example images from the training set](images/snow_gray_trainset.jpg?raw=true "Example images from the training set")
 
-*_Training set_ (excerpt, grayscale run).*
+**Generated images (examples, grayscale run):**
 
 ![Generated images](images/snow_64x96_2_e1380_rnd256.jpg?raw=true "Generated images")
 
-*Examples of generated images (grayscale run).*
 
-
+**Training set (excerpt, color run):**
 
 ![Example images from the training set](images/snow_color_trainset.jpg?raw=true "Example images from the training set")
 
-*_Training set_ (excerpt, color run).*
+**Generated images (examples, color run):**
 
 ![Generated images](images/snow_64x96_rnd256.jpg?raw=true "Generated images")
-
-*Examples of generated images (color run).*
 
 # Usage
 
