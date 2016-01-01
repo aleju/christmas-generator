@@ -93,4 +93,5 @@ You can sample images from a trained network using `th sample.lua --profile="bau
 
 * Even in the case of low variance datasets 2k images seem to not be enough to generate images very few errors. Aim at >5k.
 * For high variance datasets even 10k seem to not be enough.
-* Evade cleaning up manually results downloaded from flickr. Takes ages of time.
+* Results downloaded from flickr by keyword can contain a lot of off-topic stuff. When searching for `christmas baubles` I got images of police cars, when searching for `snow landscape` I got images of leopards. While cleaning up I regularly had to remove around half of all images and then probably still had lots of bad ones remaining.
+* Evade cleaning up results downloaded from flickr manually. Takes ages of time.
